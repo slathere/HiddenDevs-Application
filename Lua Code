@@ -7,7 +7,7 @@ Credit: slathere
 --]]
 
 
-local PlrCServer = {}
+local PlrCServer = {} -- basic setup for OOP in roblox lua
 PlrCServer.__index = PlrCServer
 
 function PlrCServer.new(hbOrg, objFolder, fistAnims, swordAnims, char, wpn, animNum, stun, dmgDB, hb, sound, dmg, hrp, dbTime, anims, punchSounds, swordSounds, eAnims)
@@ -37,7 +37,7 @@ function PlrCServer.new(hbOrg, objFolder, fistAnims, swordAnims, char, wpn, anim
 end
 
 function PlrCServer:findWpn()
-	if self.char and self.char:FindFirstChild("genshinSword") then
+	if self.char and self.char:FindFirstChild("genshinSword") then -- check character for weapon
 		return "sword"
 	else
 		return "fist"
@@ -47,7 +47,7 @@ end
 function PlrCServer:findAnims()
 	if self.wpn == "fist" then
 		self.hbOrg = self.objFolder:WaitForChild("punchHB")
-		local animArray = {
+		local animArray = { -- provides list of animations for playing punch anims
 			self.fistAnims:WaitForChild("anim1"),
 			self.fistAnims:WaitForChild("anim2"),
 			self.fistAnims:WaitForChild("anim3")
@@ -55,12 +55,12 @@ function PlrCServer:findAnims()
 		return animArray
 	elseif self.wpn == "sword" then
 		self.hbOrg = self.hitInfo.char:FindFirstChild("genshinSword"):WaitForChild("swordHitboxPosition")
-		local animArray = {
+		local animArray = {-- provides list of anims for sword
 			self.swordAnims:WaitForChild("anim1"),
 			self.swordAnims:WaitForChild("anim2"),
 			self.swordAnims:WaitForChild("anim3")
 		}
-		return animArray
+		return animArray -- returns animations
 	end
 end
 
@@ -68,50 +68,50 @@ function PlrCServer:createHB()
 	local hb
 	if self.wpn == "fist" then
 		local limb
-		hb = self.hbOrg:Clone()
+		hb = self.hbOrg:Clone() -- clones the hbOrg object
 		hb.Name = "hb"
 		hb.Transparency = 1
-		if self.animNum.Value == 1 then
+		if self.animNum.Value == 1 then -- checks for limb
 			limb = "Right Arm"
 		elseif self.animNum.Value == 2 then
 			limb = "Left Arm"
 		elseif self.animNum.Value == 3 then
 			limb = "Right Leg"
 		end
-		hb.Parent = self.char:FindFirstChild(limb)
+		hb.Parent = self.char:FindFirstChild(limb) -- assigns it to that limb
 		hb.CFrame = self.char:FindFirstChild(limb).CFrame
-		local hbWeld = Instance.new("WeldConstraint")
+		local hbWeld = Instance.new("WeldConstraint") -- welds to limb
 		hbWeld.Part0 = hb
 		hbWeld.Part1 = self.char:FindFirstChild(limb)
 		hbWeld.Parent = hb
 	elseif self.wpn == "sword" then
-		hb = self.hbOrg:Clone()
+		hb = self.hbOrg:Clone() -- clones the hbOrg for swords
 		hb.Name = "hb"
 		hb.Transparency = 1
-		hb.Parent = self.char:FindFirstChild("genshinSword")
+		hb.Parent = self.char:FindFirstChild("genshinSword") -- assigns to sword
 		hb.CFrame = self.hbOrg.CFrame
-		local hbWeld = Instance.new("WeldConstraint")
+		local hbWeld = Instance.new("WeldConstraint") -- welds it
 		hbWeld.Part0 = hb
 		hbWeld.Part1 = self.hbOrg
 		hbWeld.Parent = hb
 	end
-	return hb
+	return hb -- returns hitbox after being defined
 end
 
 function PlrCServer:findSound()
 	local sound
 	if self.wpn == "fist" then
-		local sounds = self.punchSounds
-		if self.animNum.Value == 1 then
+		local sounds = self.punchSounds -- defines sounds as the punchsounds if fists
+		if self.animNum.Value == 1 then -- decides which sound to use (incase you got multiple i dont in my game)
 			sound = sounds:WaitForChild("sound1"):Clone()
 		elseif self.animNum.Value == 2 then
 			sound = sounds:WaitForChild("sound2"):Clone()
 		elseif self.animNum.Value == 3 then
 			sound = sounds:WaitForChild("sound3"):Clone()
 		end
-		sound.RollOffMinDistance = 50
+		sound.RollOffMinDistance = 50 -- sets the distance of the sound playing in the server
 		sound.RollOffMaxDistance = 100
-	elseif self.wpn == "sword" then
+	elseif self.wpn == "sword" then -- same thing for swords from here
 		local sounds = self.swordSounds
 		if self.animNum.Value == 1 then
 			sound = sounds:WaitForChild("sound1"):Clone()
@@ -124,25 +124,25 @@ function PlrCServer:findSound()
 		sound.RollOffMaxDistance = 100
 		sound.Parent = self.char
 	end
-	return sound
+	return sound -- returns the sound to be played
 end
 
 function PlrCServer:touchedHitbox(ePart)
-	if self.char and not ePart:IsDescendantOf(self.char) and not self.stun.Value and not self.dmgDB then
+	if self.char and not ePart:IsDescendantOf(self.char) and not self.stun.Value and not self.dmgDB then -- if its not the player's limbs
 		local eHum = ePart.Parent:FindFirstChild("Humanoid")
 		local eHRP = ePart.Parent:FindFirstChild("HumanoidRootPart")
 		if eHum and eHRP then
-			self.hb:Destroy()
+			self.hb:Destroy() -- destroys so it doesnt hit twice
 			self.dmgDB = true
 			local eAnimator = eHum:FindFirstChild("Animator")
 			if self.wpn == "fist" then
 				self.sound.Parent = eHum.Parent
-				self.sound:Play()
+				self.sound:Play() -- plays the defined sound
 			end
 			local eAnimTracks = eAnimator:GetPlayingAnimationTracks()
 			for i, v in pairs(eAnimTracks) do
 				if v.Name == "hitAnim" then
-					v:Stop()
+					v:Stop() -- stops the enemy from punching
 				end
 			end
 			local eStun = eHum.Parent.Status:FindFirstChild("plrStun")
@@ -158,7 +158,7 @@ function PlrCServer:touchedHitbox(ePart)
 				eAnimTrack:Play()
 				if self.animNum.Value == 3 then
 					local goal = {}
-					goal.CFrame = CFrame.new((self.hrp.CFrame * CFrame.new(0,0,-15)).Position, self.hrp.CFrame.Position)
+					goal.CFrame = CFrame.new((self.hrp.CFrame * CFrame.new(0,0,-15)).Position, self.hrp.CFrame.Position) -- knocks back 15 studs through a tween
 					goal.CFrame -= Vector3.new(0,goal.CFrame.Y-eHRP.CFrame.Y,0)
 					local tweenInfo = TweenInfo.new(0.5)
 					local tween = game:GetService("TweenService"):Create(eHRP,tweenInfo,goal)
@@ -167,7 +167,7 @@ function PlrCServer:touchedHitbox(ePart)
 			elseif eStun and eBlock then
 				eBlock.Value-=1
 			end
-			task.wait(1.6 - self.dbTime)
+			task.wait(1.6 - self.dbTime) -- waits to unstun the enemy
 			eStun.Value = false
 			eHum.JumpHeight = 7.2
 			eHum.WalkSpeed = 12
@@ -175,7 +175,7 @@ function PlrCServer:touchedHitbox(ePart)
 	end
 end
 
-function PlrCServer:animatePlayer()
+function PlrCServer:animatePlayer() -- plays animations (i am aware i should have done this locally)
 	local hum = self.char:FindFirstChild("Humanoid")
 	local animator = hum:FindFirstChild("Animator")
 	if hum and animator then
@@ -187,21 +187,21 @@ function PlrCServer:animatePlayer()
 		end
 		local animTrack = animator:LoadAnimation(self.anims[self.animNum.Value])
 		animTrack.Name = "hitAnim"
-		return animTrack
+		return animTrack -- returns the animation track
 	end
 end
 
-function PlrCServer:calDmg()
+function PlrCServer:calDmg() -- finds amount of damage needed to be done (would be useful if there are modifiers)
 	local dmg
 	if self.wpn == "fist" then
 		dmg = 5
 	elseif self.wpn == "sword" then
 		dmg = 20
 	end
-	return dmg
+	return dmg -- returns damage
 end
 
-function PlrCServer:calDBTime()
+function PlrCServer:calDBTime() -- calculates the debounce time based on animation and the weapon used
 	local dbTime
 	if self.wpn == "fist" then
 		if self.animNum.Value == 1 then
@@ -220,12 +220,12 @@ function PlrCServer:calDBTime()
 			dbTime = 0.8
 		end
 	end
-	return dbTime
+	return dbTime -- returns the time
 end
 
 local db = false
 
-function PlrCServer:commClient(plr, objFolder, fistAnims, swordAnims, punchSounds, swordSounds, eAnims)
+function PlrCServer:commClient(plr, objFolder, fistAnims, swordAnims, punchSounds, swordSounds, eAnims) -- puts it all together
 	local char = plr.Character or plr.CharacterAdded:Wait()
 	local status = char:WaitForChild("Status")
 	local stun = status:WaitForChild("plrStun")
@@ -267,6 +267,6 @@ function PlrCServer:commClient(plr, objFolder, fistAnims, swordAnims, punchSound
 		end
 		db = false
 	end
-end
+end -- to sum up it just uses the mass of returned values to put everything together into an attack
 
-return PlrCServer
+return PlrCServer -- returns when the module script is required 
