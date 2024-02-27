@@ -1,0 +1,272 @@
+--[[ 
+
+Credit: slathere
+	ROBLOX slathere (@Slatryte)
+	Discord @slathere
+
+--]]
+
+
+local PlrCServer = {}
+PlrCServer.__index = PlrCServer
+
+function PlrCServer.new(hbOrg, objFolder, fistAnims, swordAnims, char, wpn, animNum, stun, dmgDB, hb, sound, dmg, hrp, dbTime, anims, punchSounds, swordSounds, eAnims)
+	local object = {}
+	setmetatable(object, PlrCServer)
+	
+	object.hbOrg = hbOrg
+	object.objFolder = objFolder
+	object.fistAnims = fistAnims
+	object.swordAnims = swordAnims
+	object.char = char
+	object.wpn = wpn
+	object.animNum = animNum
+	object.stun = stun
+	object.dmgDB = dmgDB
+	object.hb = hb
+	object.sound = sound
+	object.dmg = dmg
+	object.hrp = hrp
+	object.dbTime = dbTime
+	object.anims = anims
+	object.punchSounds = punchSounds
+	object.swordSounds = swordSounds
+	object.eAnims = eAnims
+	
+	return object
+end
+
+function PlrCServer:findWpn()
+	if self.char and self.char:FindFirstChild("genshinSword") then
+		return "sword"
+	else
+		return "fist"
+	end
+end
+
+function PlrCServer:findAnims()
+	if self.wpn == "fist" then
+		self.hbOrg = self.objFolder:WaitForChild("punchHB")
+		local animArray = {
+			self.fistAnims:WaitForChild("anim1"),
+			self.fistAnims:WaitForChild("anim2"),
+			self.fistAnims:WaitForChild("anim3")
+		}
+		return animArray
+	elseif self.wpn == "sword" then
+		self.hbOrg = self.hitInfo.char:FindFirstChild("genshinSword"):WaitForChild("swordHitboxPosition")
+		local animArray = {
+			self.swordAnims:WaitForChild("anim1"),
+			self.swordAnims:WaitForChild("anim2"),
+			self.swordAnims:WaitForChild("anim3")
+		}
+		return animArray
+	end
+end
+
+function PlrCServer:createHB()
+	local hb
+	if self.wpn == "fist" then
+		local limb
+		hb = self.hbOrg:Clone()
+		hb.Name = "hb"
+		hb.Transparency = 1
+		if self.animNum.Value == 1 then
+			limb = "Right Arm"
+		elseif self.animNum.Value == 2 then
+			limb = "Left Arm"
+		elseif self.animNum.Value == 3 then
+			limb = "Right Leg"
+		end
+		hb.Parent = self.char:FindFirstChild(limb)
+		hb.CFrame = self.char:FindFirstChild(limb).CFrame
+		local hbWeld = Instance.new("WeldConstraint")
+		hbWeld.Part0 = hb
+		hbWeld.Part1 = self.char:FindFirstChild(limb)
+		hbWeld.Parent = hb
+	elseif self.wpn == "sword" then
+		hb = self.hbOrg:Clone()
+		hb.Name = "hb"
+		hb.Transparency = 1
+		hb.Parent = self.char:FindFirstChild("genshinSword")
+		hb.CFrame = self.hbOrg.CFrame
+		local hbWeld = Instance.new("WeldConstraint")
+		hbWeld.Part0 = hb
+		hbWeld.Part1 = self.hbOrg
+		hbWeld.Parent = hb
+	end
+	return hb
+end
+
+function PlrCServer:findSound()
+	local sound
+	if self.wpn == "fist" then
+		local sounds = self.punchSounds
+		if self.animNum.Value == 1 then
+			sound = sounds:WaitForChild("sound1"):Clone()
+		elseif self.animNum.Value == 2 then
+			sound = sounds:WaitForChild("sound2"):Clone()
+		elseif self.animNum.Value == 3 then
+			sound = sounds:WaitForChild("sound3"):Clone()
+		end
+		sound.RollOffMinDistance = 50
+		sound.RollOffMaxDistance = 100
+	elseif self.wpn == "sword" then
+		local sounds = self.swordSounds
+		if self.animNum.Value == 1 then
+			sound = sounds:WaitForChild("sound1"):Clone()
+		elseif self.animNum.Value == 2 then
+			sound = sounds:WaitForChild("sound2"):Clone()
+		elseif self.animNum.Value == 3 then
+			sound = sounds:WaitForChild("sound3"):Clone()
+		end
+		sound.RollOffMinDistance = 50
+		sound.RollOffMaxDistance = 100
+		sound.Parent = self.char
+	end
+	return sound
+end
+
+function PlrCServer:touchedHitbox(ePart)
+	if self.char and not ePart:IsDescendantOf(self.char) and not self.stun.Value and not self.dmgDB then
+		local eHum = ePart.Parent:FindFirstChild("Humanoid")
+		local eHRP = ePart.Parent:FindFirstChild("HumanoidRootPart")
+		if eHum and eHRP then
+			self.hb:Destroy()
+			self.dmgDB = true
+			local eAnimator = eHum:FindFirstChild("Animator")
+			if self.wpn == "fist" then
+				self.sound.Parent = eHum.Parent
+				self.sound:Play()
+			end
+			local eAnimTracks = eAnimator:GetPlayingAnimationTracks()
+			for i, v in pairs(eAnimTracks) do
+				if v.Name == "hitAnim" then
+					v:Stop()
+				end
+			end
+			local eStun = eHum.Parent.Status:FindFirstChild("plrStun")
+			local eBlock = eHum.Parent.Status:FindFirstChild("plrBlock")
+			if eStun and eBlock and eBlock.Value < 1 then
+				eStun.Value = true
+				eHum.JumpHeight = 0
+				eHum.WalkSpeed = 2
+				eHum:TakeDamage(self.dmg)
+				local eAnims = self.eAnims
+				local eAnim = eAnims:WaitForChild("eAnim")
+				local eAnimTrack = eAnimator:LoadAnimation(eAnim)
+				eAnimTrack:Play()
+				if self.animNum.Value == 3 then
+					local goal = {}
+					goal.CFrame = CFrame.new((self.hrp.CFrame * CFrame.new(0,0,-15)).Position, self.hrp.CFrame.Position)
+					goal.CFrame -= Vector3.new(0,goal.CFrame.Y-eHRP.CFrame.Y,0)
+					local tweenInfo = TweenInfo.new(0.5)
+					local tween = game:GetService("TweenService"):Create(eHRP,tweenInfo,goal)
+					tween:Play()
+				end
+			elseif eStun and eBlock then
+				eBlock.Value-=1
+			end
+			task.wait(1.6 - self.dbTime)
+			eStun.Value = false
+			eHum.JumpHeight = 7.2
+			eHum.WalkSpeed = 12
+		end
+	end
+end
+
+function PlrCServer:animatePlayer()
+	local hum = self.char:FindFirstChild("Humanoid")
+	local animator = hum:FindFirstChild("Animator")
+	if hum and animator then
+		local animTracks = animator:GetPlayingAnimationTracks()
+		for i, v in pairs(animTracks) do
+			if v.Name == "runningAnimation" then
+				v:Stop()
+			end
+		end
+		local animTrack = animator:LoadAnimation(self.anims[self.animNum.Value])
+		animTrack.Name = "hitAnim"
+		return animTrack
+	end
+end
+
+function PlrCServer:calDmg()
+	local dmg
+	if self.wpn == "fist" then
+		dmg = 5
+	elseif self.wpn == "sword" then
+		dmg = 20
+	end
+	return dmg
+end
+
+function PlrCServer:calDBTime()
+	local dbTime
+	if self.wpn == "fist" then
+		if self.animNum.Value == 1 then
+			dbTime = 0.85
+		elseif self.animNum.Value == 2 then
+			dbTime = 0.767
+		elseif self.animNum.Value == 3 then
+			dbTime = 0.9
+		end
+	elseif self.wpn == "sword" then
+		if self.animNum.Value == 1 then
+			dbTime = 0.65
+		elseif self.animNum.Value == 2 then
+			dbTime = 0.65
+		elseif self.animNum.Value == 3 then
+			dbTime = 0.8
+		end
+	end
+	return dbTime
+end
+
+local db = false
+
+function PlrCServer:commClient(plr, objFolder, fistAnims, swordAnims, punchSounds, swordSounds, eAnims)
+	local char = plr.Character or plr.CharacterAdded:Wait()
+	local status = char:WaitForChild("Status")
+	local stun = status:WaitForChild("plrStun")
+	if not db and not stun.Value and char then
+		db = true
+		self.eAnims = eAnims
+		self.punchSounds = punchSounds
+		self.swordSounds = swordSounds
+		self.fistAnims = fistAnims
+		self.swordAnims = swordAnims
+		self.objFolder = objFolder
+		self.dmgDB = false
+		self.plr = plr
+		self.char = char
+		self.hrp = char:FindFirstChild("HumanoidRootPart")
+		self.stun = stun
+		self.wpn = PlrCServer:findWpn()
+		self.anims = PlrCServer:findAnims()
+		self.animNum = status:WaitForChild("animNum")
+		self.hb = PlrCServer:createHB()
+		game:GetService("Debris"):AddItem(self.hb, 0.5)
+		self.sound = PlrCServer:findSound()
+		if self.wpn == "sword" then
+			self.sound:Play()
+		end
+		self.animTrack = PlrCServer:animatePlayer()
+		self.animTrack:Play()
+		self.dmg = PlrCServer:calDmg()
+		self.dbTime = PlrCServer:calDBTime()
+		self.hb.Touched:Connect(function(ePart)
+			PlrCServer:touchedHitbox(ePart)
+		end)
+		self.char:FindFirstChild("Humanoid").WalkSpeed = 2
+		task.wait(1.6-self.dbTime)
+		self.char:FindFirstChild("Humanoid").WalkSpeed = 16
+		self.animNum.Value+=1
+		if self.animNum.Value > 3 then
+			self.animNum.Value = 1
+		end
+		db = false
+	end
+end
+
+return PlrCServer
